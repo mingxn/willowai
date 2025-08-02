@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Plant Chatbot Functions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #2ecc71;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #27ae60;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success { border-color: #28a745; background: #d4edda; }
+        .error { border-color: #dc3545; background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Plant Chatbot Functions</h1>
+    
+    <div class="test-section">
+        <h2>1. Test API Connection</h2>
+        <button class="test-button" onclick="testApiConnection()">Test API Health</button>
+        <div id="api-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test Schedule Management</h2>
+        <button class="test-button" onclick="testCreateSchedule()">Create Test Schedule</button>
+        <button class="test-button" onclick="testGetSchedules()">Get All Schedules</button>
+        <button class="test-button" onclick="testUpcomingReminders()">Test Upcoming Reminders</button>
+        <button class="test-button" onclick="testClearSchedules()">Clear All Schedules</button>
+        <div id="schedule-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test Formatting Functions</h2>
+        <button class="test-button" onclick="testAnalysisFormatting()">Test Analysis Formatting</button>
+        <button class="test-button" onclick="testJsonFormatting()">Test JSON Formatting</button>
+        <div id="format-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Test Helper Functions</h2>
+        <button class="test-button" onclick="testCareTypeIcons()">Test Care Type Icons</button>
+        <button class="test-button" onclick="testTimeFormatting()">Test Time Formatting</button>
+        <button class="test-button" onclick="testNotifications()">Test Notifications</button>
+        <div id="helper-result" class="result"></div>
+    </div>
+
+    <script>
+        // Mock schedule data for testing
+        let testSchedules = [];
+        let scheduleIdCounter = 1;
+
+        // Test API Connection
+        async function testApiConnection() {
+            const resultEl = document.getElementById('api-result');
+            resultEl.textContent = 'Testing API connection...';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8000/health');
+                const data = await response.json();
+                
+                if (data.status === 'healthy') {
+                    resultEl.className = 'result success';
+                    resultEl.textContent = `✅ API Connection Success!\nStatus: ${data.status}\nMessage: ${data.message}\nOpenAI: ${data.openai_status}`;
+                } else {
+                    throw new Error('API not healthy');
+                }
+            } catch (error) {
+                resultEl.className = 'result error';
+                resultEl.textContent = `❌ API Connection Failed!\nError: ${error.message}`;
+            }
+        }
+
+        // Test Schedule Creation
+        function testCreateSchedule() {
+            const resultEl = document.getElementById('schedule-result');
+            
+            try {
+                // Mock new schedule
+                const newSchedule = {
+                    id: scheduleIdCounter++,
+                    plantName: 'Cây hoa hồng test',
+                    careType: 'watering',
+                    startDate: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
+                    repeatType: 'daily',
+                    repeatCount: 7,
+                    notes: 'Test schedule for demo',
+                    completedDates: [],
+                    createdAt: new Date()
+                };
+
+                testSchedules.push(newSchedule);
+                localStorage.setItem('plantCareSchedules', JSON.stringify(testSchedules));
+
+                resultEl.className = 'result success';
+                resultEl.textContent = `✅ Schedule Created Successfully!
+ID: ${newSchedule.id}
+Plant: ${newSchedule.plantName}
+Care Type: ${getCareTypeName(newSchedule.careType)}
+Start: ${formatDateTime(newSchedule.startDate)}
+Repeat: ${getRepeatText(newSchedule)}`;
+
+            } catch (error) {
+                resultEl.className = 'result error';
+                resultEl.textContent = `❌ Schedule Creation Failed!\nError: ${error.message}`;
+            }
+        }
+
+        // Test Get Schedules
+        function testGetSchedules() {
+            const resultEl = document.getElementById('schedule-result');
+            
+            try {
+                const saved = localStorage.getItem('plantCareSchedules');
+                const schedules = saved ? JSON.parse(saved) : [];
+
+                resultEl.className = 'result success';
+                resultEl.textContent = `✅ Retrieved ${schedules.length} schedules:\n\n` + 
+                    schedules.map(s => `${s.id}. ${s.plantName} - ${getCareTypeName(s.careType)}`).join('\n');
+
+            } catch (error) {
+                resultEl.className = 'result error';
+                resultEl.textContent = `❌ Get Schedules Failed!\nError: ${error.message}`;
+            }
+        }
+
+        // Test Upcoming Reminders
+        function testUpcomingReminders() {
+            const resultEl = document.getElementById('schedule-result');
+            
+            try {
+                const saved = localStorage.getItem('plantCareSchedules');
+                const schedules = saved ? JSON.parse(saved) : [];
+                
+                const now = new Date();
+                const next24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+                
+                const upcoming = schedules.filter(schedule => {
+                    const nextDate = getNextReminderDate(schedule);
+                    return nextDate && nextDate <= next24Hours && nextDate >= now;
+                });
+
+                resultEl.className = 'result success';
+                resultEl.textContent = `✅ Found ${upcoming.length} upcoming reminders:\n\n` + 
+                    upcoming.map(s => `${s.plantName} - ${getCareTypeName(s.careType)} - ${formatReminderTime(getNextReminderDate(s))}`).join('\n');
+
+            } catch (error) {
+                resultEl.className = 'result error';
+                resultEl.textContent = `❌ Upcoming Reminders Failed!\nError: ${error.message}`;
+            }
+        }
+
+        // Test Clear Schedules
+        function testClearSchedules() {
+            const resultEl = document.getElementById('schedule-result');
+            
+            try {
+                localStorage.removeItem('plantCareSchedules');
+                testSchedules = [];
+                scheduleIdCounter = 1;
+
+                resultEl.className = 'result success';
+                resultEl.textContent = '✅ All schedules cleared!';
+
+            } catch (error) {
+                resultEl.className = 'result error';
+                resultEl.textContent = `❌ Clear Schedules Failed!\nError: ${error.message}`;
+            }
+        }
+
+        // Test Analysis Formatting
+        function testAnalysisFormatting() {
+            const resultEl = document.getElementById('format-result');
+            
+            try {
+                const testAnalysis = {
+                    "1. NHẬN DẠNG CÂY": {
+                        "Tên khoa học và tên thông thường": {
+                            "Tên khoa học": "Rosa damascena",
+                            "Tên thông thường": "Hoa hồng Damascus"
+                        },
+                        "Họ thực vật": "Rosaceae",
+                        "Độ tin cậy nhận dạng (%)": "95"
+                    },
+                    "2. TÌNH TRẠNG SỨC KHỎE": {
+                        "Tình trạng tổng thể": "Khỏe mạnh",
+                        "Mức độ nghiêm trọng": "Không có"
+                    }
+                };
+
+                const formatted = formatStructuredAnalysis(testAnalysis);
+                
+                resultEl.className = 'result success';
+                resultEl.innerHTML = '✅ Analysis Formatting Test:\n\n' + formatted;
+
+            } catch (error) {
+                resultEl.className = 'result error';
+                resultEl.textContent = `❌ Analysis Formatting Failed!\nError: ${error.message}`;
+            }
+        }
+
+        // Test JSON Formatting
+        function testJsonFormatting() {
+            const resultEl = document.getElementById('format-result');
+            
+            try {
+                const testJson = `{
+                    "plant_type": "Rose",
+                    "health_status": "Good",
+                    "recommendations": ["Water daily", "Add fertilizer"]
+                }`;
+
+                const parsed = JSON.parse(testJson);
+                const formatted = formatJsonValue(parsed);
+                
+                resultEl.className = 'result success';
+                resultEl.innerHTML = '✅ JSON Formatting Test:\n\n' + formatted;
+
+            } catch (error) {
+                resultEl.className = 'result error';
+                resultEl.textContent = `❌ JSON Formatting Failed!\nError: ${error.message}`;
+            }
+        }
+
+        // Test Care Type Icons
+        function testCareTypeIcons() {
+            const resultEl = document.getElementById('helper-result');
+            
+            try {
+                const careTypes = ['watering', 'fertilizing', 'pruning', 'repotting', 'spraying', 'checking'];
+                const results = careTypes.map(type => 
+                    `${getCareTypeIcon(type)} ${type} - ${getCareTypeName(type)}`
+                );
+
+                resultEl.className = 'result success';
+                resultEl.textContent = '✅ Care Type Icons Test:\n\n' + results.join('\n');
+
+            } catch (error) {
+                resultEl.className = 'result error';
+                resultEl.textContent = `❌ Care Type Icons Failed!\nError: ${error.message}`;
+            }
+        }
+
+        // Test Time Formatting
+        function testTimeFormatting() {
+            const resultEl = document.getElementById('helper-result');
+            
+            try {
+                const now = new Date();
+                const future = new Date(now.getTime() + 45 * 60 * 1000); // 45 minutes later
+                const tomorrow = new Date(now.getTime() + 25 * 60 * 60 * 1000); // 25 hours later
+
+                const results = [
+                    `Current time: ${formatDateTime(now)}`,
+                    `45 min from now: ${formatReminderTime(future)}`,
+                    `Tomorrow: ${formatReminderTime(tomorrow)}`
+                ];
+
+                resultEl.className = 'result success';
+                resultEl.textContent = '✅ Time Formatting Test:\n\n' + results.join('\n');
+
+            } catch (error) {
+                resultEl.className = 'result error';
+                resultEl.textContent = `❌ Time Formatting Failed!\nError: ${error.message}`;
+            }
+        }
+
+        // Test Notifications
+        function testNotifications() {
+            const resultEl = document.getElementById('helper-result');
+            
+            try {
+                if ('Notification' in window) {
+                    if (Notification.permission === 'granted') {
+                        new Notification('Test Notification', {
+                            body: 'This is a test notification from Plant AI!',
+                            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🌿</text></svg>'
+                        });
+                        
+                        resultEl.className = 'result success';
+                        resultEl.textContent = '✅ Notification sent successfully!';
+                    } else if (Notification.permission === 'default') {
+                        Notification.requestPermission().then(permission => {
+                            if (permission === 'granted') {
+                                new Notification('Permission Granted!', {
+                                    body: 'You will now receive plant care reminders.',
+                                });
+                                resultEl.className = 'result success';
+                                resultEl.textContent = '✅ Notification permission granted and test sent!';
+                            } else {
+                                resultEl.className = 'result error';
+                                resultEl.textContent = '❌ Notification permission denied!';
+                            }
+                        });
+                    } else {
+                        resultEl.className = 'result error';
+                        resultEl.textContent = '❌ Notifications are blocked!';
+                    }
+                } else {
+                    resultEl.className = 'result error';
+                    resultEl.textContent = '❌ This browser does not support notifications!';
+                }
+
+            } catch (error) {
+                resultEl.className = 'result error';
+                resultEl.textContent = `❌ Notification Test Failed!\nError: ${error.message}`;
+            }
+        }
+
+        // Helper Functions (copied from PlantChatbot.vue)
+        function getCareTypeIcon(careType) {
+            const icons = {
+                watering: '💧',
+                fertilizing: '🌱',
+                pruning: '✂️',
+                repotting: '🪴',
+                spraying: '💨',
+                checking: '🔍'
+            };
+            return icons[careType] || '🌿';
+        }
+
+        function getCareTypeName(careType) {
+            const names = {
+                watering: 'Tưới nước',
+                fertilizing: 'Bón phân',
+                pruning: 'Tỉa cành',
+                repotting: 'Thay chậu',
+                spraying: 'Phun thuốc',
+                checking: 'Kiểm tra sức khỏe'
+            };
+            return names[careType] || 'Chăm sóc';
+        }
+
+        function getRepeatText(schedule) {
+            if (schedule.repeatType === 'none') {
+                return 'Không lặp lại';
+            }
+            const typeNames = {
+                daily: 'hàng ngày',
+                weekly: 'hàng tuần',
+                monthly: 'hàng tháng'
+            };
+            return `Lặp lại ${typeNames[schedule.repeatType]} (${schedule.repeatCount} lần)`;
+        }
+
+        function formatDateTime(date) {
+            return new Date(date).toLocaleString('vi-VN');
+        }
+
+        function formatReminderTime(date) {
+            const now = new Date();
+            const diff = date - now;
+            const minutes = Math.floor(diff / (1000 * 60));
+            const hours = Math.floor(minutes / 60);
+
+            if (minutes < 60) {
+                return `${minutes} phút nữa`;
+            } else if (hours < 24) {
+                return `${hours} giờ nữa`;
+            } else {
+                return date.toLocaleDateString('vi-VN');
+            }
+        }
+
+        function getNextReminderDate(schedule) {
+            const now = new Date();
+            let nextDate = new Date(schedule.startDate);
+
+            if (schedule.repeatType === 'none') {
+                return nextDate > now ? nextDate : null;
+            }
+
+            let count = 0;
+            while (nextDate <= now && count < schedule.repeatCount) {
+                switch (schedule.repeatType) {
+                    case 'daily':
+                        nextDate.setDate(nextDate.getDate() + 1);
+                        break;
+                    case 'weekly':
+                        nextDate.setDate(nextDate.getDate() + 7);
+                        break;
+                    case 'monthly':
+                        nextDate.setMonth(nextDate.getMonth() + 1);
+                        break;
+                }
+                count++;
+            }
+
+            return count < schedule.repeatCount ? nextDate : null;
+        }
+
+        function formatStructuredAnalysis(data) {
+            let formatted = '📊 <strong>Kết quả phân tích chi tiết:</strong><br><br>';
+
+            for (const [key, value] of Object.entries(data)) {
+                if (key.includes('NHẬN DẠNG') || key.includes('1.')) {
+                    formatted += '🔍 <strong>NHẬN DẠNG CÂY</strong><br>';
+                    formatted += formatPlantIdentification(value) + '<br>';
+                } else if (key.includes('TÌNH TRẠNG') || key.includes('2.')) {
+                    formatted += '⚕️ <strong>TÌNH TRẠNG SỨC KHỎE</strong><br>';
+                    formatted += formatHealthStatus(value) + '<br>';
+                }
+            }
+
+            return formatted;
+        }
+
+        function formatPlantIdentification(data) {
+            let result = '';
+            if (data['Tên khoa học và tên thông thường']) {
+                const names = data['Tên khoa học và tên thông thường'];
+                result += `🏷️ <strong>Tên khoa học:</strong> ${names['Tên khoa học'] || 'Chưa xác định'}<br>`;
+                result += `🌿 <strong>Tên thông thường:</strong> ${names['Tên thông thường'] || 'Chưa xác định'}<br>`;
+            }
+            if (data['Họ thực vật']) {
+                result += `🌳 <strong>Họ thực vật:</strong> ${data['Họ thực vật']}<br>`;
+            }
+            if (data['Độ tin cậy nhận dạng (%)']) {
+                result += `📊 <strong>Độ tin cậy:</strong> ${data['Độ tin cậy nhận dạng (%)']}%<br>`;
+            }
+            return result;
+        }
+
+        function formatHealthStatus(data) {
+            let result = '';
+            if (data['Tình trạng tổng thể']) {
+                const status = data['Tình trạng tổng thể'];
+                const statusIcon = status === 'Khỏe mạnh' ? '💚' : status === 'Bệnh' ? '❤️‍🩹' : '⚠️';
+                result += `${statusIcon} <strong>Trạng thái:</strong> ${status}<br>`;
+            }
+            return result;
+        }
+
+        function formatJsonValue(value, indent = 0) {
+            const indentStr = '&nbsp;'.repeat(indent * 4);
+
+            if (typeof value === 'object' && value !== null) {
+                let result = '';
+                for (const [k, v] of Object.entries(value)) {
+                    result += `${indentStr}• <strong>${k}:</strong> `;
+                    if (typeof v === 'object') {
+                        result += '<br>' + formatJsonValue(v, indent + 1);
+                    } else {
+                        result += `${v}<br>`;
+                    }
+                }
+                return result;
+            }
+
+            return `${indentStr}${value}<br>`;
+        }
+    </script>
+</body>
+</html>

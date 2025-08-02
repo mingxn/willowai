@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌿 Plant Analysis AI - Chatbot</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            display: flex;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .logo h1 {
+            font-size: 24px;
+            color: #2ecc71;
+            margin-bottom: 5px;
+        }
+
+        .logo p {
+            font-size: 14px;
+            color: #bdc3c7;
+        }
+
+        .chat-info {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .chat-info h3 {
+            color: #2ecc71;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .chat-info ul {
+            list-style: none;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .chat-info li {
+            margin-bottom: 5px;
+            color: #ecf0f1;
+        }
+
+        .chat-info li:before {
+            content: "🌱 ";
+            margin-right: 5px;
+        }
+
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+        }
+
+        .chat-header {
+            background: #2ecc71;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .chat-header h2 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #ffffff;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: #2ecc71;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.bot .message-content {
+            background: #ecf0f1;
+            color: #2c3e50;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-time {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .analysis-result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .analysis-section {
+            margin-bottom: 15px;
+        }
+
+        .analysis-section h4 {
+            color: #2ecc71;
+            margin-bottom: 8px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+
+        .analysis-section h4 i {
+            margin-right: 8px;
+        }
+
+        .analysis-section p, .analysis-section li {
+            font-size: 13px;
+            line-height: 1.5;
+            color: #495057;
+        }
+
+        .analysis-section ul {
+            padding-left: 20px;
+        }
+
+        .image-preview {
+            max-width: 200px;
+            border-radius: 10px;
+            margin: 10px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .image-upload {
+            position: relative;
+        }
+
+        .image-upload input[type="file"] {
+            display: none;
+        }
+
+        .image-upload label {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            transition: all 0.3s ease;
+        }
+
+        .image-upload label:hover {
+            background: #e9ecef;
+            border-color: #2ecc71;
+        }
+
+        .image-upload label.has-image {
+            border-color: #2ecc71;
+            background: #d4edda;
+        }
+
+        .image-upload label i {
+            font-size: 20px;
+            color: #6c757d;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s ease;
+            resize: none;
+            min-height: 60px;
+            max-height: 120px;
+        }
+
+        .chat-input:focus {
+            border-color: #2ecc71;
+        }
+
+        .send-button {
+            background: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .send-button:hover:not(:disabled) {
+            background: #27ae60;
+        }
+
+        .send-button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .send-button i {
+            font-size: 20px;
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background: #ecf0f1;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            max-width: 70%;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: #95a5a6;
+            border-radius: 50%;
+            animation: typing 1.5s infinite ease-in-out;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.5;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background: #2ecc71;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 200px;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="chat-container">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="logo">
+                    <h1>🌿 Plant AI</h1>
+                    <p>Chatbot phân tích cây trồng</p>
+                </div>
+                
+                <div class="chat-info">
+                    <h3><i class="fas fa-info-circle"></i> Tính năng</h3>
+                    <ul>
+                        <li>Nhận dạng cây trồng</li>
+                        <li>Phát hiện bệnh</li>
+                        <li>Phân tích sinh trưởng</li>
+                        <li>Khuyến nghị chăm sóc</li>
+                        <li>Tư vấn trực tiếp</li>
+                    </ul>
+                </div>
+
+                <div class="chat-info">
+                    <h3><i class="fas fa-image"></i> Hỗ trợ định dạng</h3>
+                    <ul>
+                        <li>JPG, JPEG</li>
+                        <li>PNG, WEBP</li>
+                        <li>Tối đa 10MB</li>
+                    </ul>
+                </div>
+
+                <div class="chat-info">
+                    <h3><i class="fas fa-clock"></i> Trạng thái API</h3>
+                    <ul>
+                        <li v-if="apiStatus.connected" style="color: #2ecc71;">
+                            <i class="fas fa-check-circle"></i> Đã kết nối
+                        </li>
+                        <li v-else style="color: #e74c3c;">
+                            <i class="fas fa-times-circle"></i> Mất kết nối
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main Chat -->
+            <div class="main-chat">
+                <div class="chat-header">
+                    <h2>💬 Chatbot Phân Tích Cây Trồng</h2>
+                    <p>Gửi hình ảnh cây của bạn và đặt câu hỏi để nhận tư vấn</p>
+                </div>
+
+                <div class="chat-messages" ref="messagesContainer">
+                    <!-- Welcome message -->
+                    <div class="message bot" v-if="messages.length === 0">
+                        <div class="message-content">
+                            <strong>👋 Chào mừng bạn đến với Plant Analysis AI!</strong><br><br>
+                            Tôi có thể giúp bạn:
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>📸 Phân tích hình ảnh cây trồng</li>
+                                <li>🔍 Nhận dạng loại cây</li>
+                                <li>🩺 Chẩn đoán bệnh trên cây</li>
+                                <li>📈 Đánh giá tình trạng sinh trưởng</li>
+                                <li>💡 Đưa ra khuyến nghị chăm sóc</li>
+                            </ul>
+                            Hãy gửi hình ảnh cây của bạn hoặc đặt câu hỏi để bắt đầu!
+                        </div>
+                    </div>
+
+                    <!-- Chat messages -->
+                    <div 
+                        v-for="message in messages" 
+                        :key="message.id" 
+                        :class="['message', message.type]"
+                    >
+                        <div class="message-content">
+                            <div v-if="message.image" class="image-preview">
+                                <img :src="message.image" alt="Uploaded image" style="width: 100%; border-radius: 10px;">
+                            </div>
+                            
+                            <div v-html="message.content"></div>
+                            
+                            <div v-if="message.analysis" class="analysis-result">
+                                <div class="analysis-section" v-if="message.analysis.plant_info">
+                                    <h4><i class="fas fa-seedling"></i> Nhận dạng cây</h4>
+                                    <p><strong>Tên khoa học:</strong> {{ message.analysis.plant_info.scientific_name || 'Chưa xác định' }}</p>
+                                    <p><strong>Tên thông thường:</strong> {{ message.analysis.plant_info.common_name || 'Chưa xác định' }}</p>
+                                    <p><strong>Độ tin cậy:</strong> {{ message.analysis.plant_info.confidence || 'N/A' }}%</p>
+                                </div>
+
+                                <div class="analysis-section" v-if="message.analysis.health_status">
+                                    <h4><i class="fas fa-heartbeat"></i> Tình trạng sức khỏe</h4>
+                                    <p><strong>Trạng thái:</strong> {{ message.analysis.health_status.overall_status }}</p>
+                                    <p v-if="message.analysis.health_status.severity_level"><strong>Mức độ:</strong> {{ message.analysis.health_status.severity_level }}</p>
+                                </div>
+
+                                <div class="analysis-section" v-if="message.analysis.recommendations">
+                                    <h4><i class="fas fa-lightbulb"></i> Khuyến nghị</h4>
+                                    <ul v-if="message.analysis.recommendations.treatment_steps">
+                                        <li v-for="step in message.analysis.recommendations.treatment_steps" :key="step">{{ step }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="message-time">{{ formatTime(message.timestamp) }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Typing indicator -->
+                    <div v-if="isTyping" class="typing-indicator">
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <span style="margin-left: 10px; color: #7f8c8d; font-size: 14px;">Đang phân tích...</span>
+                    </div>
+                </div>
+
+                <!-- Chat Input -->
+                <div class="chat-input-container">
+                    <div v-if="errorMessage" class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i> {{ errorMessage }}
+                    </div>
+                    
+                    <div v-if="successMessage" class="success-message">
+                        <i class="fas fa-check"></i> {{ successMessage }}
+                    </div>
+
+                    <div class="chat-input-wrapper">
+                        <div class="image-upload">
+                            <input 
+                                type="file" 
+                                id="imageInput" 
+                                @change="handleImageUpload"
+                                accept="image/*"
+                            >
+                            <label 
+                                for="imageInput" 
+                                :class="{'has-image': selectedImage}"
+                                :title="selectedImage ? 'Đã chọn hình ảnh' : 'Upload hình ảnh'"
+                            >
+                                <i :class="selectedImage ? 'fas fa-check' : 'fas fa-camera'"></i>
+                            </label>
+                        </div>
+
+                        <textarea
+                            v-model="currentMessage"
+                            @keydown="handleKeydown"
+                            placeholder="Gửi hình ảnh hoặc đặt câu hỏi về cây trồng..."
+                            class="chat-input"
+                            :disabled="isTyping"
+                        ></textarea>
+
+                        <button 
+                            @click="sendMessage"
+                            :disabled="isTyping || (!currentMessage.trim() && !selectedImage)"
+                            class="send-button"
+                            title="Gửi tin nhắn"
+                        >
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    messages: [],
+                    currentMessage: '',
+                    selectedImage: null,
+                    selectedImageFile: null,
+                    isTyping: false,
+                    errorMessage: '',
+                    successMessage: '',
+                    apiStatus: {
+                        connected: false
+                    },
+                    messageId: 1,
+                    apiBaseUrl: 'http://127.0.0.1:8000'
+                }
+            },
+            mounted() {
+                this.checkApiStatus();
+                this.scrollToBottom();
+            },
+            methods: {
+                async checkApiStatus() {
+                    try {
+                        const response = await axios.get(`${this.apiBaseUrl}/health`);
+                        this.apiStatus.connected = response.data.status === 'healthy';
+                    } catch (error) {
+                        this.apiStatus.connected = false;
+                    }
+                },
+
+                handleImageUpload(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        // Validate file size (10MB)
+                        if (file.size > 10 * 1024 * 1024) {
+                            this.showError('File quá lớn. Vui lòng chọn file nhỏ hơn 10MB.');
+                            return;
+                        }
+
+                        // Validate file type
+                        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                        if (!allowedTypes.includes(file.type)) {
+                            this.showError('Định dạng file không được hỗ trợ. Vui lòng chọn JPG, PNG hoặc WEBP.');
+                            return;
+                        }
+
+                        this.selectedImageFile = file;
+                        
+                        // Create preview
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.selectedImage = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                        
+                        this.showSuccess('Đã chọn hình ảnh. Nhấn gửi để phân tích.');
+                    }
+                },
+
+                handleKeydown(event) {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        this.sendMessage();
+                    }
+                },
+
+                async sendMessage() {
+                    if (this.isTyping) return;
+
+                    // Validate input
+                    if (!this.currentMessage.trim() && !this.selectedImage) {
+                        this.showError('Vui lòng nhập tin nhắn hoặc chọn hình ảnh.');
+                        return;
+                    }
+
+                    // Clear previous messages
+                    this.clearMessages();
+
+                    // Add user message
+                    const userMessage = {
+                        id: this.messageId++,
+                        type: 'user',
+                        content: this.currentMessage || 'Phân tích hình ảnh này',
+                        image: this.selectedImage,
+                        timestamp: new Date()
+                    };
+                    this.messages.push(userMessage);
+
+                    // Clear input
+                    const messageToSend = this.currentMessage;
+                    const imageToSend = this.selectedImageFile;
+                    this.currentMessage = '';
+                    this.selectedImage = null;
+                    this.selectedImageFile = null;
+                    document.getElementById('imageInput').value = '';
+
+                    this.scrollToBottom();
+
+                    // Show typing indicator
+                    this.isTyping = true;
+
+                    try {
+                        let botResponse;
+
+                        if (imageToSend) {
+                            // Analyze image
+                            botResponse = await this.analyzeImage(imageToSend);
+                        } else {
+                            // Text-only message
+                            botResponse = await this.handleTextMessage(messageToSend);
+                        }
+
+                        // Add bot response
+                        const botMessage = {
+                            id: this.messageId++,
+                            type: 'bot',
+                            content: botResponse.content,
+                            analysis: botResponse.analysis,
+                            timestamp: new Date()
+                        };
+                        this.messages.push(botMessage);
+
+                    } catch (error) {
+                        console.error('Error:', error);
+                        const errorMessage = {
+                            id: this.messageId++,
+                            type: 'bot',
+                            content: '❌ Xin lỗi, đã xảy ra lỗi khi xử lý yêu cầu của bạn. Vui lòng thử lại.',
+                            timestamp: new Date()
+                        };
+                        this.messages.push(errorMessage);
+                    } finally {
+                        this.isTyping = false;
+                        this.scrollToBottom();
+                    }
+                },
+
+                async analyzeImage(imageFile) {
+                    const formData = new FormData();
+                    formData.append('file', imageFile);
+                    formData.append('enhance_image', 'true');
+
+                    const response = await axios.post(`${this.apiBaseUrl}/analyze/complete`, formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        }
+                    });
+
+                    const result = response.data;
+                    
+                    if (result.success) {
+                        // Parse and format the analysis text properly
+                        let analysisContent = '';
+                        
+                        if (result.analysis_text) {
+                            // Try to extract JSON from analysis_text
+                            let jsonMatch = result.analysis_text.match(/```json\s*([\s\S]*?)\s*```/);
+                            if (jsonMatch) {
+                                try {
+                                    const jsonData = JSON.parse(jsonMatch[1]);
+                                    analysisContent = this.formatStructuredAnalysis(jsonData);
+                                } catch (e) {
+                                    // If JSON parsing fails, format as text
+                                    analysisContent = this.formatAnalysisText(result.analysis_text);
+                                }
+                            } else {
+                                analysisContent = this.formatAnalysisText(result.analysis_text);
+                            }
+                        } else {
+                            analysisContent = 'Không thể phân tích được hình ảnh này.';
+                        }
+
+                        return {
+                            content: analysisContent,
+                            analysis: result.structured_data
+                        };
+                    } else {
+                        throw new Error(result.error || 'Phân tích thất bại');
+                    }
+                },
+
+                formatStructuredAnalysis(data) {
+                    let formatted = '📊 <strong>Kết quả phân tích chi tiết:</strong><br><br>';
+                    
+                    // Process each section
+                    for (const [key, value] of Object.entries(data)) {
+                        if (key.includes('NHẬN DẠNG') || key.includes('1.')) {
+                            formatted += '🔍 <strong>NHẬN DẠNG CÂY</strong><br>';
+                            formatted += this.formatPlantIdentification(value) + '<br>';
+                        } else if (key.includes('TÌNH TRẠNG') || key.includes('2.')) {
+                            formatted += '⚕️ <strong>TÌNH TRẠNG SỨC KHỎE</strong><br>';
+                            formatted += this.formatHealthStatus(value) + '<br>';
+                        } else if (key.includes('SINH TRƯỞNG') || key.includes('3.')) {
+                            formatted += '📈 <strong>PHÂN TÍCH SINH TRƯỞNG</strong><br>';
+                            formatted += this.formatGrowthAnalysis(value) + '<br>';
+                        } else if (key.includes('KHUYẾN NGHỊ') || key.includes('4.')) {
+                            formatted += '💡 <strong>KHUYẾN NGHỊ CHĂM SÓC</strong><br>';
+                            formatted += this.formatRecommendations(value) + '<br>';
+                        } else if (key.includes('THÔNG TIN') || key.includes('5.')) {
+                            formatted += '📋 <strong>THÔNG TIN BỔ SUNG</strong><br>';
+                            formatted += this.formatAdditionalInfo(value) + '<br>';
+                        }
+                    }
+                    
+                    return formatted;
+                },
+
+                async handleTextMessage(message) {
+                    // Simple text responses for common questions
+                    const lowerMessage = message.toLowerCase();
+                    
+                    if (lowerMessage.includes('cây') || lowerMessage.includes('trồng')) {
+                        return {
+                            content: `🌱 Tôi hiểu bạn muốn hỏi về cây trồng. Để tôi có thể giúp bạn tốt nhất, hãy gửi hình ảnh cây mà bạn quan tâm. 
+                            
+                            Tôi có thể:
+                            • 📸 Phân tích hình ảnh để nhận dạng loại cây
+                            • 🔍 Phát hiện các vấn đề về sức khỏe
+                            • 💡 Đưa ra khuyến nghị chăm sóc cụ thể
+                            
+                            Nhấn vào icon 📷 để upload hình ảnh nhé!`
+                        };
+                    }
+                    
+                    if (lowerMessage.includes('bệnh') || lowerMessage.includes('vàng') || lowerMessage.includes('héo')) {
+                        return {
+                            content: `🔬 Để chẩn đoán bệnh trên cây chính xác, tôi cần xem hình ảnh của cây bạn.
+                            
+                            Khi chụp ảnh, hãy chú ý:
+                            • 📸 Chụp rõ nét phần lá bị bệnh
+                            • ☀️ Chụp dưới ánh sáng tự nhiên
+                            • 🔍 Bao gồm cả lá khỏe mạnh để so sánh
+                            • 📏 Chụp cả cây và cận cảnh vùng bị bệnh
+                            
+                            Upload hình ảnh để tôi phân tích nhé!`
+                        };
+                    }
+
+                    return {
+                        content: `💬 Xin chào! Tôi là chatbot chuyên phân tích cây trồng.
+                        
+                        Tôi có thể giúp bạn:
+                        • 🌱 Nhận dạng loại cây từ hình ảnh
+                        • 🔬 Phát hiện bệnh và sâu hại
+                        • 📈 Đánh giá tình trạng sinh trưởng
+                        • 💡 Tư vấn cách chăm sóc
+                        
+                        Hãy gửi hình ảnh cây của bạn để tôi phân tích chi tiết!`
+                    };
+                },
+
+                formatAnalysisText(analysisText) {
+                    if (!analysisText) return '';
+                    
+                    // Remove JSON markers and clean up
+                    let text = analysisText.replace(/```json|```/g, '').trim();
+                    
+                    // Try to parse as JSON first
+                    try {
+                        const jsonData = JSON.parse(text);
+                        return this.formatJsonAnalysis(jsonData);
+                    } catch (e) {
+                        // If not JSON, check if it's Vietnamese text
+                        if (text.includes('NHẬN DẠNG') || text.includes('TÌNH TRẠNG')) {
+                            return this.formatVietnameseText(text);
+                        }
+                        return text;
+                    }
+                },
+
+                formatVietnameseText(text) {
+                    // Format Vietnamese text with proper structure
+                    let formatted = text
+                        .replace(/(\d+\.\s*NHẬN DẠNG CÂY[^}]*})/g, '🔍 <strong>NHẬN DẠNG CÂY</strong><br>$1<br><br>')
+                        .replace(/(\d+\.\s*TÌNH TRẠNG SỨC KHỎE[^}]*})/g, '⚕️ <strong>TÌNH TRẠNG SỨC KHỎE</strong><br>$1<br><br>')
+                        .replace(/(\d+\.\s*PHÂN TÍCH SINH TRƯỞNG[^}]*})/g, '📈 <strong>PHÂN TÍCH SINH TRƯỞNG</strong><br>$1<br><br>')
+                        .replace(/(\d+\.\s*KHUYẾN NGHỊ[^}]*})/g, '💡 <strong>KHUYẾN NGHỊ CHĂM SÓC</strong><br>$1<br><br>')
+                        .replace(/(\d+\.\s*THÔNG TIN BỔ SUNG[^}]*})/g, '📋 <strong>THÔNG TIN BỔ SUNG</strong><br>$1<br><br>');
+                    
+                    return formatted;
+                },
+
+                formatJsonAnalysis(data) {
+                    let formatted = '📊 <strong>Kết quả phân tích chi tiết:</strong><br><br>';
+                    
+                    for (const [key, value] of Object.entries(data)) {
+                        if (key.includes('NHẬN DẠNG') || key.includes('1.')) {
+                            formatted += '🔍 <strong>NHẬN DẠNG CÂY</strong><br>';
+                            formatted += this.formatPlantIdentification(value);
+                        } else if (key.includes('TÌNH TRẠNG') || key.includes('2.')) {
+                            formatted += '<br>⚕️ <strong>TÌNH TRẠNG SỨC KHỎE</strong><br>';
+                            formatted += this.formatHealthStatus(value);
+                        } else if (key.includes('SINH TRƯỞNG') || key.includes('3.')) {
+                            formatted += '<br>📈 <strong>PHÂN TÍCH SINH TRƯỞNG</strong><br>';
+                            formatted += this.formatGrowthAnalysis(value);
+                        } else if (key.includes('KHUYẾN NGHỊ') || key.includes('4.')) {
+                            formatted += '<br>💡 <strong>KHUYẾN NGHỊ CHĂM SÓC</strong><br>';
+                            formatted += this.formatRecommendations(value);
+                        } else if (key.includes('THÔNG TIN') || key.includes('5.')) {
+                            formatted += '<br>📋 <strong>THÔNG TIN BỔ SUNG</strong><br>';
+                            formatted += this.formatAdditionalInfo(value);
+                        }
+                    }
+                    
+                    return formatted;
+                },
+
+                formatPlantIdentification(data) {
+                    let result = '';
+                    if (data['Tên khoa học và tên thông thường']) {
+                        const names = data['Tên khoa học và tên thông thường'];
+                        result += `🏷️ <strong>Tên khoa học:</strong> ${names['Tên khoa học'] || 'Chưa xác định'}<br>`;
+                        result += `🌿 <strong>Tên thông thường:</strong> ${names['Tên thông thường'] || 'Chưa xác định'}<br>`;
+                    }
+                    if (data['Họ thực vật']) {
+                        result += `🌳 <strong>Họ thực vật:</strong> ${data['Họ thực vật']}<br>`;
+                    }
+                    if (data['Độ tin cậy nhận dạng (%)']) {
+                        result += `📊 <strong>Độ tin cậy:</strong> ${data['Độ tin cậy nhận dạng (%)']}%<br>`;
+                    }
+                    return result;
+                },
+
+                formatHealthStatus(data) {
+                    let result = '';
+                    if (data['Tình trạng tổng thể']) {
+                        const status = data['Tình trạng tổng thể'];
+                        const statusIcon = status === 'Khỏe mạnh' ? '💚' : status === 'Bệnh' ? '❤️‍🩹' : '⚠️';
+                        result += `${statusIcon} <strong>Trạng thái:</strong> ${status}<br>`;
+                    }
+                    if (data['Tên bệnh có thể']) {
+                        result += `🦠 <strong>Bệnh:</strong> ${data['Tên bệnh có thể']}<br>`;
+                    }
+                    if (data['Mức độ nghiêm trọng']) {
+                        result += `⚖️ <strong>Mức độ:</strong> ${data['Mức độ nghiêm trọng']}<br>`;
+                    }
+                    return result;
+                },
+
+                formatGrowthAnalysis(data) {
+                    let result = '';
+                    if (data['Giai đoạn phát triển']) {
+                        result += `🌱 <strong>Giai đoạn:</strong> ${data['Giai đoạn phát triển']}<br>`;
+                    }
+                    if (data['Tình trạng dinh dưỡng']) {
+                        result += `🍃 <strong>Dinh dưỡng:</strong> ${data['Tình trạng dinh dưỡng']}<br>`;
+                    }
+                    if (data['Tốc độ sinh trưởng']) {
+                        result += `📈 <strong>Tốc độ phát triển:</strong> ${data['Tốc độ sinh trưởng']}<br>`;
+                    }
+                    return result;
+                },
+
+                formatRecommendations(data) {
+                    let result = '';
+                    if (data['Biện pháp điều trị']) {
+                        result += `💊 <strong>Điều trị:</strong><br>`;
+                        const treatment = data['Biện pháp điều trị'];
+                        if (typeof treatment === 'object') {
+                            for (const [key, value] of Object.entries(treatment)) {
+                                result += `&nbsp;&nbsp;• ${value}<br>`;
+                            }
+                        } else {
+                            result += `&nbsp;&nbsp;• ${treatment}<br>`;
+                        }
+                    }
+                    if (data['Cách chăm sóc tối ưu']) {
+                        result += `🌟 <strong>Chăm sóc:</strong><br>`;
+                        const care = data['Cách chăm sóc tối ưu'];
+                        if (typeof care === 'object') {
+                            for (const [key, value] of Object.entries(care)) {
+                                result += `&nbsp;&nbsp;• ${value}<br>`;
+                            }
+                        } else {
+                            result += `&nbsp;&nbsp;• ${care}<br>`;
+                        }
+                    }
+                    return result;
+                },
+
+                formatAdditionalInfo(data) {
+                    let result = '';
+                    if (data['Nguồn gốc cây']) {
+                        result += `🌍 <strong>Nguồn gốc:</strong> ${data['Nguồn gốc cây']}<br>`;
+                    }
+                    if (data['Mùa sinh trưởng tốt nhất']) {
+                        result += `🗓️ <strong>Mùa tốt nhất:</strong> ${data['Mùa sinh trưởng tốt nhất']}<br>`;
+                    }
+                    if (data['Điều kiện trồng lý tưởng']) {
+                        result += `🏡 <strong>Điều kiện lý tưởng:</strong><br>`;
+                        const conditions = data['Điều kiện trồng lý tưởng'];
+                        for (const [key, value] of Object.entries(conditions)) {
+                            result += `&nbsp;&nbsp;• ${key}: ${value}<br>`;
+                        }
+                    }
+                    return result;
+                },
+
+                formatJsonValue(value, indent = 0) {
+                    const indentStr = '&nbsp;'.repeat(indent * 4);
+                    
+                    if (typeof value === 'object' && value !== null) {
+                        let result = '';
+                        for (const [k, v] of Object.entries(value)) {
+                            result += `${indentStr}• <strong>${k}:</strong> `;
+                            if (typeof v === 'object') {
+                                result += '<br>' + this.formatJsonValue(v, indent + 1);
+                            } else {
+                                result += `${v}<br>`;
+                            }
+                        }
+                        return result;
+                    }
+                    
+                    return `${indentStr}${value}<br>`;
+                },
+
+                formatTime(timestamp) {
+                    return timestamp.toLocaleTimeString('vi-VN', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                },
+
+                scrollToBottom() {
+                    this.$nextTick(() => {
+                        const container = this.$refs.messagesContainer;
+                        if (container) {
+                            container.scrollTop = container.scrollHeight;
+                        }
+                    });
+                },
+
+                showError(message) {
+                    this.errorMessage = message;
+                    setTimeout(() => {
+                        this.errorMessage = '';
+                    }, 5000);
+                },
+
+                showSuccess(message) {
+                    this.successMessage = message;
+                    setTimeout(() => {
+                        this.successMessage = '';
+                    }, 3000);
+                },
+
+                clearMessages() {
+                    this.errorMessage = '';
+                    this.successMessage = '';
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
