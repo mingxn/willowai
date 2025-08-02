@@ -586,7 +586,7 @@ export default {
         connected: false,
       },
       messageId: 1,
-      apiBaseUrl: "http://127.0.0.1:8000",
+      apiBaseUrl: "http://127.0.0.1:5000",
 
       // Schedule management
       showScheduleModal: false,

@@ -31,9 +31,9 @@ Dự án phân tích cây trồng thông minh bằng hình ảnh sử dụng Ope
   - Giao diện tương tự Vue.js
 
 ### 3. API Documentation
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/health
+- **Swagger UI**: http://localhost:5000/docs
+- **ReDoc**: http://localhost:5000/redoc
+- **Health Check**: http://localhost:5000/health
 
 ## 🛠️ Cài đặt
 
@@ -87,7 +87,7 @@ python -c "from src.core.openai_client import OpenAIClient; client = OpenAIClien
 
 1. **Khởi động API server**:
 ```bash
-python -m uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn src.api.main:app --reload --host 0.0.0.0 --port 5000
 ```
 
 2. **Khởi động Vue.js development server**:
@@ -134,13 +134,13 @@ python src/main.py --image path/to/image.jpg --analysis disease
 
 ```bash
 # Swagger UI - Giao diện test API
-http://localhost:8000/docs
+http://localhost:5000/docs
 
 # ReDoc - API Documentation
-http://localhost:8000/redoc
+http://localhost:5000/redoc
 
 # Health Check
-curl http://localhost:8000/health
+curl http://localhost:5000/health
 ```
 
 ## 🏗️ Cấu trúc project chi tiết
@@ -262,7 +262,7 @@ plant-analysis-ai/
 
 ```bash
 # Mở Swagger UI
-http://localhost:8000/docs
+http://localhost:5000/docs
 
 # Các bước test:
 1. Chọn endpoint (ví dụ: /analyze/complete)
@@ -277,13 +277,13 @@ http://localhost:8000/docs
 
 ```bash
 # Phân tích toàn diện
-curl -X POST "http://localhost:8000/analyze/complete" \
+curl -X POST "http://localhost:5000/analyze/complete" \
      -H "Content-Type: multipart/form-data" \
      -F "file=@path/to/image.jpg" \
      -F "enhance_image=true"
 
 # Chỉ nhận dạng cây
-curl -X POST "http://localhost:8000/analyze/identify" \
+curl -X POST "http://localhost:5000/analyze/identify" \
      -H "Content-Type: multipart/form-data" \
      -F "file=@path/to/image.jpg"
 ```
@@ -299,7 +299,7 @@ def analyze_plant_image(image_path):
         files = {'file': f}
         data = {'enhance_image': 'true'}
         response = requests.post(
-            'http://localhost:8000/analyze/complete',
+            'http://localhost:5000/analyze/complete',
             files=files,
             data=data
         )
@@ -326,7 +326,7 @@ async function analyzePlant(imagePath) {
 
     try {
         const response = await axios.post(
-            'http://localhost:8000/analyze/complete',
+            'http://localhost:5000/analyze/complete',
             form,
             { headers: form.getHeaders() }
         );
@@ -445,10 +445,10 @@ python src/main.py --image "samples/orange_tree_disease.jpg" --analysis complete
 **1. API không kết nối được**
 ```bash
 # Kiểm tra API server
-curl http://localhost:8000/health
+curl http://localhost:5000/health
 
 # Nếu lỗi, khởi động lại:
-python -m uvicorn src.api.main:app --reload --port 8000
+python -m uvicorn src.api.main:app --reload --port 5000
 ```
 
 **2. ChatBot hiển thị JSON thô**

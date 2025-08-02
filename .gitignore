@@ -70,6 +70,3 @@ data/results/
 *.log
 temp/
 cache/
-
-node_modules/
-dist/

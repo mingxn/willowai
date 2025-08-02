@@ -17,7 +17,7 @@ Giao diện chatbot Vue.js cho hệ thống phân tích cây trồng bằng AI.
 
 ### Phương pháp 1: File HTML đơn giản (Khuyến nghị)
 1. Mở file `chatbot.html` trong trình duyệt
-2. Đảm bảo FastAPI server đang chạy trên port 8000
+2. Đảm bảo FastAPI server đang chạy trên port 5000
 3. Bắt đầu chat với AI
 
 ### Phương pháp 2: Vue.js Development Server
@@ -48,7 +48,7 @@ npm run serve
 ## 🔧 Cấu hình
 
 ### API Endpoint
-Mặc định chatbot kết nối đến `http://127.0.0.1:8000`. Để thay đổi:
+Mặc định chatbot kết nối đến `http://127.0.0.1:5000`. Để thay đổi:
 
 1. Trong `chatbot.html`:
 ```javascript
@@ -130,7 +130,7 @@ Chatbot tự động tích hợp với các endpoint:
 
 ### API không kết nối được
 - Kiểm tra FastAPI server đang chạy
-- Xác nhận port 8000 không bị chặn
+- Xác nhận port 5000 không bị chặn
 - Kiểm tra firewall settings
 
 ### Upload ảnh thất bại

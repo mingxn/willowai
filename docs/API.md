@@ -7,7 +7,7 @@ Plant Analysis AI API cung cấp các endpoints để phân tích cây trồng t
 ## Base URL
 
 ```
-http://localhost:8000
+http://localhost:5000
 ```
 
 ## Authentication
@@ -215,7 +215,7 @@ Phân tích nhiều hình ảnh cùng lúc (tối đa 10 files).
 
 **Complete Analysis:**
 ```bash
-curl -X POST "http://localhost:8000/analyze/complete" \
+curl -X POST "http://localhost:5000/analyze/complete" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@plant_image.jpg" \
@@ -225,7 +225,7 @@ curl -X POST "http://localhost:8000/analyze/complete" \
 
 **Health Check:**
 ```bash
-curl -X GET "http://localhost:8000/health"
+curl -X GET "http://localhost:5000/health"
 ```
 
 ### Python Example
@@ -234,7 +234,7 @@ curl -X GET "http://localhost:8000/health"
 import requests
 
 # Health check
-response = requests.get("http://localhost:8000/health")
+response = requests.get("http://localhost:5000/health")
 print(response.json())
 
 # Analyze image
@@ -242,7 +242,7 @@ with open("plant_image.jpg", "rb") as f:
     files = {"file": f}
     data = {"enhance_image": True, "save_result": True}
     response = requests.post(
-        "http://localhost:8000/analyze/complete",
+        "http://localhost:5000/analyze/complete",
         files=files,
         data=data
     )
@@ -258,7 +258,7 @@ formData.append('file', fileInput.files[0]);
 formData.append('enhance_image', 'true');
 formData.append('save_result', 'true');
 
-fetch('http://localhost:8000/analyze/complete', {
+fetch('http://localhost:5000/analyze/complete', {
   method: 'POST',
   body: formData
 })

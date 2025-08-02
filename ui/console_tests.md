@@ -2,7 +2,7 @@
 
 ## 1. Test API Connection
 ```javascript
-fetch('http://127.0.0.1:8000/health')
+fetch('http://127.0.0.1:5000/health')
   .then(r => r.json())
   .then(d => console.log('API Health:', d))
 ```
@@ -90,7 +90,7 @@ try {
 }
 
 // Test API with wrong endpoint
-fetch('http://127.0.0.1:8000/invalid')
+fetch('http://127.0.0.1:5000/invalid')
   .then(r => r.json())
   .catch(e => console.log('API error handled:', e.message));
 ```

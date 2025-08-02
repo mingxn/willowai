@@ -1,6 +1,6 @@
-"""
-Configuration settings for the plant analysis application.
-"""
+# """
+# Configuration settings for the plant analysis application.
+# """
 import os
 from dotenv import load_dotenv
 
@@ -16,6 +16,10 @@ class Config:
     OPENAI_MODEL = os.getenv("OPENAI_MODEL", "GPT-4o")
     MAX_TOKENS = int(os.getenv("MAX_TOKENS", "1000"))
     TEMPERATURE = float(os.getenv("TEMPERATURE", "0.3"))
+    
+    # ChromaDB settings
+    CHROMADB_HOST = os.getenv("CHROMADB_HOST", "localhost")
+    CHROMADB_PORT = int(os.getenv("CHROMADB_PORT", "8000"))
     
     # Image processing settings
     MAX_IMAGE_SIZE = int(os.getenv("MAX_IMAGE_SIZE", "1024"))

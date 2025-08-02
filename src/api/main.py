@@ -3,7 +3,7 @@ FastAPI application for Plant Analysis AI.
 """
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from typing import Optional, List
 import tempfile
 import os
@@ -17,6 +17,7 @@ sys.path.insert(0, str(src_dir))
 sys.path.insert(0, str(src_dir.parent))
 
 from src.core.plant_analyzer import PlantAnalyzer
+from src.core.vector_db import get_vector_db, initialize_vector_db
 from src.utils.helpers import save_analysis_result, get_project_info
 from src.utils.config import config
 
@@ -43,11 +44,20 @@ analyzer = None
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize the analyzer on startup."""
+    """Initialize the analyzer and vector database on startup."""
     global analyzer
     try:
         analyzer = PlantAnalyzer()
         print("✅ Plant Analyzer initialized successfully")
+        
+        # Initialize ChromaDB
+        initialize_vector_db()  # Uses config values
+        vector_db = get_vector_db()
+        if vector_db and vector_db.is_available():
+            print("✅ ChromaDB vector database connected successfully")
+        else:
+            print("⚠️ ChromaDB not available - records will not be saved to vector database")
+            
     except Exception as e:
         print(f"❌ Failed to initialize Plant Analyzer: {e}")
 
@@ -66,6 +76,10 @@ async def root():
             "analyze_plant": "/analyze/plant", 
             "analyze_disease": "/analyze/disease",
             "analyze_growth": "/analyze/growth",
+            "analyze_batch": "/analyze/batch",
+            "search_records": "/records/search",
+            "get_record": "/records/{record_id}",
+            "database_stats": "/records/stats",
             "health": "/health",
             "info": "/info"
         }
@@ -86,11 +100,16 @@ async def health_check():
         # Test API connection
         test_result = analyzer.test_connection()
         
+        # Test ChromaDB connection
+        vector_db = get_vector_db()
+        vector_db_status = "connected" if vector_db and vector_db.is_available() else "disconnected"
+        
         if test_result["success"]:
             return {
                 "status": "healthy",
                 "message": "API is running and OpenAI connection is working",
-                "openai_status": "connected"
+                "openai_status": "connected",
+                "vector_db_status": vector_db_status
             }
         else:
             return JSONResponse(
@@ -99,6 +118,7 @@ async def health_check():
                     "status": "degraded", 
                     "message": "API is running but OpenAI connection failed",
                     "openai_status": "disconnected",
+                    "vector_db_status": vector_db_status,
                     "error": test_result.get("error")
                 }
             )
@@ -233,13 +253,14 @@ async def _analyze_image(
         response_data = result.to_dict()
         
         # Add request metadata
-        response_data["request_metadata"] = {
+        request_metadata = {
             "filename": file.filename,
             "file_size": len(content),
             "analysis_type": analysis_type,
             "enhance_image": enhance_image,
             "remove_background": remove_background
         }
+        response_data["request_metadata"] = request_metadata
         
         # Save result if requested
         if save_result and result.success:
@@ -249,15 +270,46 @@ async def _analyze_image(
                 "data/results"
             )
         
+        # Save to vector database
+        background_tasks.add_task(
+            _save_to_vector_db,
+            request_metadata,
+            response_data,
+            temp_file_path
+        )
+        
         return response_data
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
     
     finally:
+        # Don't delete temp file yet - vector DB task needs it
+        # It will be cleaned up after vector DB save
+        pass
+
+def _save_to_vector_db(request_data: dict, response_data: dict, image_path: str):
+    """Background task to save analysis record to vector database."""
+    try:
+        vector_db = get_vector_db()
+        if vector_db and vector_db.is_available():
+            record_id = vector_db.save_analysis_record(
+                request_data=request_data,
+                response_data=response_data,
+                image_path=image_path
+            )
+            if record_id:
+                print(f"✅ Analysis record saved to vector DB: {record_id}")
+            else:
+                print("⚠️ Failed to save analysis record to vector DB")
+        else:
+            print("⚠️ Vector DB not available, skipping record save")
+    except Exception as e:
+        print(f"❌ Error saving to vector DB: {e}")
+    finally:
         # Clean up temporary file
         try:
-            os.unlink(temp_file_path)
+            os.unlink(image_path)
         except:
             pass
 
@@ -325,6 +377,73 @@ async def get_analysis_types():
         }
     }
 
+@app.get("/records/search")
+async def search_analysis_records(
+    query: str,
+    limit: int = 10,
+    analysis_type: Optional[str] = None
+):
+    """Search analysis records in vector database."""
+    vector_db = get_vector_db()
+    if not vector_db or not vector_db.is_available():
+        raise HTTPException(status_code=503, detail="Vector database not available")
+    
+    # Prepare filters
+    filters = {}
+    if analysis_type:
+        filters["analysis_type"] = analysis_type
+    
+    try:
+        records = vector_db.search_records(
+            query=query,
+            limit=limit,
+            filter_metadata=filters if filters else None
+        )
+        
+        return {
+            "query": query,
+            "limit": limit,
+            "filters": filters,
+            "total_results": len(records),
+            "records": records
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+@app.get("/records/{record_id}")
+async def get_analysis_record(record_id: str):
+    """Get a specific analysis record by ID."""
+    vector_db = get_vector_db()
+    if not vector_db or not vector_db.is_available():
+        raise HTTPException(status_code=503, detail="Vector database not available")
+    
+    try:
+        record = vector_db.get_record_by_id(record_id)
+        if not record:
+            raise HTTPException(status_code=404, detail="Record not found")
+        
+        return record
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get record: {str(e)}")
+
+@app.get("/records/stats")
+async def get_database_statistics():
+    """Get vector database statistics."""
+    vector_db = get_vector_db()
+    if not vector_db:
+        return {"available": False, "message": "Vector database not initialized"}
+    
+    try:
+        stats = vector_db.get_statistics()
+        return stats
+        
+    except Exception as e:
+        return {"available": False, "error": str(e)}
+
 # Error handlers
 @app.exception_handler(500)
 async def internal_error_handler(request, exc):
@@ -342,4 +461,4 @@ async def not_found_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=5000, reload=True)
